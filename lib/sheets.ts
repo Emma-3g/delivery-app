@@ -12,7 +12,7 @@ function mapRowToDelivery(row: string[], index: number): Delivery {
     orderId: row[1] || "",
     customerEmail: row[2] || "",
     deliveryType: row[3] || "",
-    quantity: parseInt(row[4] || "1"),
+    quantity: parseInt(row[4] || "1", 10),
     serialNumber: row[5] || "",
     status: row[6] as DeliveryStatus,
     problem: row[7] || "",
@@ -27,10 +27,13 @@ function mapRowToDelivery(row: string[], index: number): Delivery {
   }
 }
 
-export async function getPendingDeliveries(): Promise<Delivery[]> {
+async function getSheetsClient() {
   const auth = await getAuth()
-  const sheets = google.sheets({ version: "v4", auth })
+  return google.sheets({ version: "v4", auth })
+}
 
+export async function getPendingDeliveries(): Promise<Delivery[]> {
+  const sheets = await getSheetsClient()
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: RANGE,
@@ -43,9 +46,7 @@ export async function getPendingDeliveries(): Promise<Delivery[]> {
 }
 
 export async function getDeliveryHistory(): Promise<Delivery[]> {
-  const auth = await getAuth()
-  const sheets = google.sheets({ version: "v4", auth })
-
+  const sheets = await getSheetsClient()
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: RANGE,
@@ -58,9 +59,7 @@ export async function getDeliveryHistory(): Promise<Delivery[]> {
 }
 
 export async function findDeliveryByOrderId(orderId: string): Promise<Delivery | null> {
-  const auth = await getAuth()
-  const sheets = google.sheets({ version: "v4", auth })
-
+  const sheets = await getSheetsClient()
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: RANGE,
@@ -79,9 +78,7 @@ export async function updateDeliveryStatus(
   problem?: string,
   comentario?: string
 ): Promise<boolean> {
-  const auth = await getAuth()
-  const sheets = google.sheets({ version: "v4", auth })
-
+  const sheets = await getSheetsClient()
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: RANGE,
@@ -93,6 +90,7 @@ export async function updateDeliveryStatus(
 
   const timestamp = new Date().toISOString()
 
+  // Actualizo estado, problema y timestamp en columnas G, H e I (7,8,9)
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
     range: `${SHEET_NAME}!G${index + 2}:I${index + 2}`,
@@ -102,9 +100,10 @@ export async function updateDeliveryStatus(
     },
   })
 
+  // Actualizo comentario en la columna AC (29)
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `${SHEET_NAME}!AC${index + 2}`, // columna 29 = comentario
+    range: `${SHEET_NAME}!AC${index + 2}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [[comentario || ""]],
@@ -115,16 +114,16 @@ export async function updateDeliveryStatus(
 }
 
 export async function addDeliveryToSheet(data: Omit<Delivery, "id">): Promise<Delivery> {
-  const auth = await getAuth()
-  const sheets = google.sheets({ version: "v4", auth })
+  const sheets = await getSheetsClient()
 
+  // Verifico que no exista orderId duplicado
   const getResp = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: `${SHEET_NAME}!B2:B`,
   })
 
-  const ordenesExistentes = getResp.data.values?.flat() || []
-  if (ordenesExistentes.includes(data.orderId)) {
+  const existingOrders = getResp.data.values?.flat() || []
+  if (existingOrders.includes(data.orderId)) {
     throw new Error(`Ya existe una entrega con orderId: ${data.orderId}`)
   }
 
@@ -170,8 +169,6 @@ export async function addDeliveryToSheet(data: Omit<Delivery, "id">): Promise<De
 
   return {
     ...data,
-    id: `del_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    id: `del_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
   }
 }
-
-
