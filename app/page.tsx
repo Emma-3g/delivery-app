@@ -1,12 +1,10 @@
 // app/page.tsx
 
-import DeliveryForm from "../components/delivery-form"
-
 export default function HomePage() {
   return (
-    <main className="container max-w-md mx-auto p-4">
-      <h1 className="text-2xl font-bold text-center mb-6">Registro de Entregas</h1>
-      <DeliveryForm />
+    <main style={{ padding: "2rem", textAlign: "center" }}>
+      <h1>✅ La app funciona correctamente</h1>
+      <p>Esta es una prueba mínima para descartar errores de ruta o contenido.</p>
     </main>
   )
 }
