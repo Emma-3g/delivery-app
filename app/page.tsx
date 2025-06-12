@@ -1,6 +1,6 @@
 // app/page.tsx
 
-import DeliveryForm from "./components/delivery-form"
+import DeliveryForm from "../components/delivery-form"
 
 export default function HomePage() {
   return (
